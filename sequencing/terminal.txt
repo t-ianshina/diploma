@@ -1,0 +1,86 @@
+############
+# 
+mkdir ./fastqc
+fastqc *.fastq -o ./fastqc
+
+# Trimmed reads
+
+TrimmomaticSE -threads 4 ../1.Raw_data/11_S1_L001_R1_001.fastq 1_1.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:36
+TrimmomaticSE -threads 4 ../1.Raw_data/12_S2_L001_R1_001.fastq 1_2.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:36
+TrimmomaticSE -threads 4 ../1.Raw_data/13_S3_L001_R1_001.fastq 1_3.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:36
+TrimmomaticSE -threads 4 ../1.Raw_data/81_S10_L001_R1_001.fastq 8_1.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:36
+TrimmomaticSE -threads 4 ../1.Raw_data/82_S17_L001_R1_001.fastq 8_2.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:36
+TrimmomaticSE -threads 4 ../1.Raw_data/83_S24_L001_R1_001.fastq 8_3.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 LEADING:25 TRAILING:25 SLIDINGWINDOW:4:25 MINLEN:36
+
+fastqc *.fastq -o ./fastqc
+
+# Indexing genome
+
+# Genome - https://www.ncbi.nlm.nih.gov/genome/22977
+
+hisat2-build -f ../P.p_genome.fna p_genome_index > Index_Logs.txt
+
+# Alignment
+
+## Get SAM
+
+hisat2 \
+ -x p_genome_index \
+ -U 1_1.fastq \
+ -S 1_1.sam
+ 
+ hisat2 \
+ -x p_genome_index \
+ -U 1_2.fastq \
+ -S 1_2.sam
+ 
+ hisat2 \
+ -x p_genome_index \
+ -U 1_3.fastq \
+ -S 1_3.sam
+ 
+ hisat2 \
+ -x p_genome_index \
+ -U 8_1.fastq \
+ -S 8_1.sam
+ 
+ hisat2 \
+ -x p_genome_index \
+ -U 8_2.fastq \
+ -S 8_2.sam
+
+hisat2 \
+ -x p_genome_index \
+ -U 8_3.fastq \
+ -S 8_3.sam
+
+## Get BAM
+
+samtools view -b 1_1.sam -o 1_1.bam
+samtools view -b 1_2.sam -o 1_2.bam
+samtools view -b 1_3.sam -o 1_3.bam
+samtools view -b 8_1.sam -o 8_1.bam
+samtools view -b 8_2.sam -o 8_2.bam
+samtools view -b 8_3.sam -o 8_3.bam
+
+samtools sort 1_1.bam > 1_1.sorted.bam
+samtools sort 1_2.bam > 1_2.sorted.bam
+samtools sort 1_3.bam > 1_3.sorted.bam
+samtools sort 8_1.bam > 8_1.sorted.bam
+samtools sort 8_2.bam > 8_2.sorted.bam
+samtools sort 8_3.bam > 8_3.sorted.bam
+
+samtools index 1_1.sorted.bam
+samtools index 1_2.sorted.bam
+samtools index 1_3.sorted.bam
+samtools index 8_1.sorted.bam
+samtools index 8_2.sorted.bam
+samtools index 8_3.sorted.bam
+
+# Table count
+
+featureCounts \
+ -g gene_id \
+ -a P.p_genome.gtf \
+ -o Table_count.txt \
+ *.sorted.bam
